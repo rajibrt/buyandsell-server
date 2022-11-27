@@ -21,6 +21,18 @@ async function run() {
         const usersCollection = client.db('buyandsell').collection('users')
         const mobileCollection = client.db('buyandsell').collection('mobile')
 
+        app.get('/jwt', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user) {
+                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '30d' })
+                return res.send({ accessToken: token });
+            }
+            res.status(403).send({ accessToken: '' })
+
+        });
+
         app.get('/category', async (req, res) => {
             const query = {};
             const category = await brandCollection.find(query).toArray();
@@ -32,6 +44,13 @@ async function run() {
             const query = { brand: ObjectId(id) }
             const singleMobile = mobileCollection.find(query);
             res.send(singleMobile);
+        })
+
+        app.get('/myphone', async (req, res) => {
+            const seller = req.query.seller;
+            const query = { seller: seller }
+            const myphone = await mobileCollection.find(query).toArray();
+            res.send(myphone);
         })
 
         app.post('/users', async (req, res) => {
@@ -79,6 +98,9 @@ async function run() {
             const result = await brandCollection.find(query).project({ brand: 1 }).toArray();
             res.send(result);
         });
+
+
+
 
     }
     finally {
