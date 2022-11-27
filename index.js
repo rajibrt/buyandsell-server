@@ -21,8 +21,29 @@ async function run() {
         const usersCollection = client.db('buyandsell').collection('users')
         const mobileCollection = client.db('buyandsell').collection('mobile')
 
+
+        function verifyJWT(req, res, next) {
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
+                return res.status(401).send('unauthorized access');
+            }
+
+            const token = authHeader.split(' ')[1];
+
+            jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+                if (err) {
+                    return res.status(403).send(message, 'forbidden access')
+                }
+                req.decoded = decoded;
+                next();
+
+            })
+
+        }
+
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
+            console.log('token', req.headers.authorization);
             const query = { email: email };
             const user = await usersCollection.findOne(query);
             if (user) {
@@ -46,8 +67,14 @@ async function run() {
             res.send(singleMobile);
         })
 
-        app.get('/myphone', async (req, res) => {
+        app.get('/myphone', verifyJWT, async (req, res) => {
             const seller = req.query.seller;
+            const decodedEmail = req.decoded.email;
+
+            if (seller !== decodedEmail) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+
             const query = { seller: seller }
             const myphone = await mobileCollection.find(query).toArray();
             res.send(myphone);
