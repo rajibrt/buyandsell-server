@@ -80,6 +80,12 @@ async function run() {
             res.send(myphone);
         })
 
+        // app.get('/users', async (req, res) => {
+        //     const query = {};
+        //     const users = await usersCollection.find(query).toArray();
+        //     res.send(users);
+        // })
+
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
@@ -90,19 +96,19 @@ async function run() {
             const email = req.params.email;
             const query = { email };
             const user = await usersCollection.findOne(query);
-            res.send({ isAdmin: user?.role == 'admin' });
+            res.send({ isAdmin: user?.role === 'admin' });
         })
         app.get('/users/seller/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email };
             const user = await usersCollection.findOne(query);
-            res.send({ isSeller: user?.role == 'Sell' });
+            res.send({ isSeller: user?.role === 'Seller' });
         })
         app.get('/users/buyer/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email };
             const user = await usersCollection.findOne(query);
-            res.send({ isBuyer: user?.role == 'Buy' });
+            res.send({ isBuyer: user?.role === 'Buyer' });
         })
 
         app.get('/allmobile', async (req, res) => {
@@ -126,6 +132,16 @@ async function run() {
             const brandcollection = await mobileCollection.find(query).toArray();
             res.send(brandcollection);
         })
+
+        app.get('/users', async (req, res) => {
+            const role = req.query.role;
+            console.log(role);
+            const query = { role: role };
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        })
+
+
 
         // app.get('/brand/:id', (req, res) => {
         //     const id = req.params.id;
