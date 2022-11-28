@@ -20,6 +20,7 @@ async function run() {
         const brandCollection = client.db('buyandsell').collection('category')
         const usersCollection = client.db('buyandsell').collection('users')
         const mobileCollection = client.db('buyandsell').collection('mobile')
+        const bookedCollection = client.db('buyandsell').collection('bookedMobile')
 
 
         const verifyAdmin = async (req, res, next) => {
@@ -80,6 +81,25 @@ async function run() {
             res.send(singleMobile);
         })
 
+        app.get('/allbookedphone', async (req, res) => {
+            const query = {};
+            const allbooked = await bookedCollection.find(query).toArray();
+            res.send(allbooked);
+        });
+
+        app.get('/buyerbookedphone', verifyJWT, async (req, res) => {
+            const buyer = req.query.buyer;
+            const decodedEmail = req.decoded.email;
+
+            if (buyer !== decodedEmail) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+
+            const query = { buyer: buyer }
+            const bookedPhone = await bookedCollection.find(query).toArray();
+            res.send(bookedPhone);
+        })
+
         app.get('/myphone', verifyJWT, async (req, res) => {
             const seller = req.query.seller;
             const decodedEmail = req.decoded.email;
@@ -99,7 +119,13 @@ async function run() {
         //     res.send(users);
         // })
 
-        app.post('/users', async (req, res) => {
+        // app.post('/users', async (req, res) => {
+        //     const user = req.body;
+        //     const result = await usersCollection.insertOne(user);
+        //     res.send(result);
+        // });
+
+        app.put('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result);
@@ -178,14 +204,24 @@ async function run() {
             res.send(result);
         });
 
+        app.post('/bookedMobile', async (req, res) => {
+            const bookedMobile = req.body;
+            const result = await bookedCollection.insertOne(bookedMobile);
+            res.send(result);
+        });
+
+        app.delete('/allmobile/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await mobileCollection.deleteOne(filter);
+            res.send(result);
+        })
+
         app.get('/brand', async (req, res) => {
             const query = {}
             const result = await brandCollection.find(query).project({ brand: 1 }).toArray();
             res.send(result);
         });
-
-
-
 
     }
     finally {
