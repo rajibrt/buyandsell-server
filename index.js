@@ -22,6 +22,19 @@ async function run() {
         const mobileCollection = client.db('buyandsell').collection('mobile')
 
 
+        const verifyAdmin = async (req, res, next) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send('forbidden access');
+
+            }
+
+            next();
+        }
+
         function verifyJWT(req, res, next) {
             const authHeader = req.headers.authorization;
             if (!authHeader) {
@@ -133,7 +146,7 @@ async function run() {
             res.send(brandcollection);
         })
 
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const role = req.query.role;
             console.log(role);
             const query = { role: role };
@@ -141,7 +154,17 @@ async function run() {
             res.send(users);
         })
 
-
+        app.get('/allusers', async (req, res) => {
+            const query = {};
+            const result = await usersCollection.find(query).toArray();
+            res.send(result);
+        })
+        app.delete('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        })
 
         // app.get('/brand/:id', (req, res) => {
         //     const id = req.params.id;
