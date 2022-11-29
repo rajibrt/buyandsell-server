@@ -3,7 +3,7 @@ const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 4000;
 
@@ -21,6 +21,7 @@ async function run() {
         const usersCollection = client.db('buyandsell').collection('users')
         const mobileCollection = client.db('buyandsell').collection('mobile')
         const bookedCollection = client.db('buyandsell').collection('bookedMobile')
+        const paymentsCollection = client.db('buyandsell').collection('payments')
 
 
         const verifyAdmin = async (req, res, next) => {
@@ -53,7 +54,31 @@ async function run() {
 
             })
 
-        }
+        };
+
+        app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            res.send(result);
+        })
+
+        app.post('/create-payment-intent', async (req, res) => {
+            const booking = req.body;
+            const price = booking.salesPrice;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount: amount,
+                "payment_method_types": [
+                    "card"
+                ],
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+
+        })
 
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
@@ -111,19 +136,7 @@ async function run() {
             const query = { seller: seller }
             const myphone = await mobileCollection.find(query).toArray();
             res.send(myphone);
-        })
-
-        // app.get('/users', async (req, res) => {
-        //     const query = {};
-        //     const users = await usersCollection.find(query).toArray();
-        //     res.send(users);
-        // })
-
-        // app.post('/users', async (req, res) => {
-        //     const user = req.body;
-        //     const result = await usersCollection.insertOne(user);
-        //     res.send(result);
-        // });
+        });
 
         app.put('/users', async (req, res) => {
             const user = req.body;
@@ -136,7 +149,8 @@ async function run() {
             const query = { email };
             const user = await usersCollection.findOne(query);
             res.send({ isAdmin: user?.role === 'admin' });
-        })
+        });
+
         app.get('/users/seller/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email };
@@ -222,6 +236,15 @@ async function run() {
             const result = await brandCollection.find(query).project({ brand: 1 }).toArray();
             res.send(result);
         });
+
+
+        app.get('/bookings/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const booking = await bookedCollection.findOne(query);
+            res.send(booking);
+        })
+
 
     }
     finally {
