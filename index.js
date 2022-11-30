@@ -134,6 +134,13 @@ async function run() {
             res.send(bookedPhone);
         })
 
+        app.delete('/buyerbookedphone/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await bookedCollection.deleteOne(filter);
+            res.send(result);
+        })
+
         app.get('/myphone', verifyJWT, async (req, res) => {
             const seller = req.query.seller;
             const decodedEmail = req.decoded.email;
@@ -147,9 +154,55 @@ async function run() {
             res.send(myphone);
         });
 
+        // app.put('/users', async (req, res) => {
+        //     // const email = req.params.email;
+        //     const query = { email }
+        //     const user = req.body;
+        //     const email = user.email;
+        //     const existingUser = await usersCollection.findOne(email)
+        //     console.log(user);
+        //     // if (user == email) {
+        //     //     return;
+        //     // }
+        //     // const result = await usersCollection.insertOne(user);
+        //     res.send(result);
+        // });
+
+        // app.put('/users', async (req, res) => {
+        //     const user = req.body;
+        //     const email = user.email;
+        //     const query = { email: email }
+        //     const existingUser = await usersCollection.findOne(query, { projection: { _id: 0, email: 1 } })
+        //     if (existingUser.email == email) {
+        //         return res.send({ message: `Email already exists` });
+        //     }
+        //     const result = await usersCollection.insertOne(user);
+        //     res.send(result);
+        // })
+
         app.put('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
+
+        app.put('/users/verified/:id', verifyJWT, async (req, res) => {
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    status: true
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         });
 
@@ -203,11 +256,23 @@ async function run() {
             res.send(users);
         })
 
+        // app.get('/allusers', async (req, res) => {
+        //     const query = {};
+        //     const result = await usersCollection.find(query).toArray();
+        //     res.send(result);
+        // })
+
         app.get('/allusers', async (req, res) => {
-            const query = {};
+            let query = {};
+            if (req.query.email) {
+                query = {
+                    email: req.query.email
+                };
+            }
             const result = await usersCollection.find(query).toArray();
             res.send(result);
         })
+
         app.delete('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
@@ -233,7 +298,7 @@ async function run() {
             res.send(result);
         });
 
-        app.delete('/allmobile/:id', verifyJWT, verifyAdmin, async (req, res) => {
+        app.delete('/allmobile/:id', verifyJWT, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await mobileCollection.deleteOne(filter);
